@@ -8,12 +8,14 @@
 
 package bcprace;
 
+import Converters.Xlsx.XlsxToJson;
 import Converters.CsvToJson;
 import Converters.Sql.SqlToJson;
 import Analyse.*;
 import Converters.Csv.JsonToCsv;
 import Converters.FlattenJson;
 import Converters.JsonToXml;
+import Converters.Xlsx.JsonToXlsx;
 import Sql.*;
 import File.*;
 import java.util.List;
@@ -59,8 +61,11 @@ public class BcPrace {
         String sqlOutputFileName = "sqlOut.sql";
         String xmlOutputFileName = "xmlOut.xml";
         String jsonOutputFileName = "jsonOut.json";
+        String csvOutputFileName = "csvOut.csv";
+        String xlsxOutputFileName = "xlsxOut.xlsx";
+        String xlsOutputFileName = "xlsxOut.xls";
         
-        String inputFileName = jsonDocumentOrg3;
+        String inputFileName = xmlDocument3;
         
         FileCheck fileChecker = new FileCheck(inputFileName);
         FileTypes fileType = fileChecker.checkFile();
@@ -125,18 +130,25 @@ public class BcPrace {
         //jsonXml.convertJson(jObject);
         
         //50° 4' 54.5505674" N 14° 26' 29.5019531" E
-        Item testItem = new Item("key","50° 4' 54.5505674\" N");
-        Item testItem2 = new Item("key","Pondělí, června 30, 2014"); //Monday, June 30, 2014        Po, Čer 30, 2014
+        //Item testItem = new Item("key","50° 4' 54.5505674\" N");
+        //Item testItem2 = new Item("key","Pondělí, června 30, 2014"); //Monday, June 30, 2014        Po, Čer 30, 2014
         
         //testItem.ChecTypes();
         //System.out.println("SEcond: ");
         //testItem2.ChecTypes();
         FlattenJson flat = new FlattenJson(jObject, "test", analyzedItems);
         
-        ToSql sqlConvertor = new ToSql("test", flat.makeJsonFlat(), DatabaseType.MySql, analyzedItems);
-        String sqlOutput = sqlConvertor.buildSql(jObject);
-        FileWrite.writeStringtoFile(sqlOutput, outputPath, sqlOutputFileName);
-        sqlOutput = null;
+        //ToSql sqlConvertor = new ToSql("test", flat.makeJsonFlat(), DatabaseType.MySql, analyzedItems);
+        //String sqlOutput = sqlConvertor.buildSql(jObject);
+        //FileWrite.writeStringtoFile(sqlOutput, outputPath, sqlOutputFileName);
+        //sqlOutput = null;
+        
+        //JsonToCsv toCsv = new JsonToCsv(outputPath, csvOutputFileName, flat.makeJsonFlat(), false);
+        //toCsv.convertToCsv();
+        
+        // Path to save file; FileName (xls or xlsx); values; true - everything in one sheet;
+        JsonToXlsx toXlsx = new JsonToXlsx(outputPath, xlsxOutputFileName, flat.makeJsonFlat(), true);
+        toXlsx.convertToXlsx();
         
         JsonWorks.saveJsonFile(jObject, outputPath, jsonOutputFileName);
         

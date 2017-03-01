@@ -81,13 +81,13 @@ public class FlattenJson {
                 Logger.getLogger(FlattenJson.class.getName()).log(Level.SEVERE, null, ex);
             }
         }
-        /*
-        this.values.forEach((key, value)->{
         
-            System.out.println("fattenJson: " + value);
+//        this.values.forEach((key, value)->{
+//        
+//            System.out.println("fattenJson: " + value);
+//        
+//        });
         
-        });
-        */
         return this.values;
         
         
