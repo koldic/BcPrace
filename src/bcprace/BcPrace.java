@@ -110,10 +110,10 @@ public class BcPrace {
             //analyzer.parseJson(jsonObjectXlsx, 10);
             analyzedItems = analyzer.Analyse();
             analyzer.PrintStorage(); 
-            /*
+            
             for (Item it : analyzedItems){
                 System.out.println("Key: " + it.getParent() + " values" + it.provideResultField());
-            }*/
+            }
             
         } catch (JSONException ex) {
             Logger.getLogger(BcPrace.class.getName()).log(Level.SEVERE, null, ex);
