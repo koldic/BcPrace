@@ -5,7 +5,6 @@
  */
 package Sql;
 
-import Analyse.AnalyzerStorage;
 import Analyse.Item;
 import Analyse.ItemType;
 import bcprace.BcPrace;
@@ -14,7 +13,6 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -22,7 +20,9 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
+import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.IntegerProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.property.SimpleIntegerProperty;
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -86,21 +86,34 @@ public class ToSql {
 
                 Iterator<Object> it = obj.keys();
                 //System.out.println("keys: "+it.);
+                int index = 0;
                 while(it.hasNext()){
                     Object fKey = it.next();
 
                     if(!(obj.get(fKey.toString()) instanceof JSONObject) && !(obj.get(fKey.toString()) instanceof JSONArray)){
                         if (!this.values.get(key).containsKey(fKey)){
-                            this.values.get(key).put(fKey.toString(), new ArrayList<>());
+                            if ((this.values.get(key).size() > 0)){
+                                    //System.out.println("Aparent: " + key + " key: " + fKey);
+                                    this.addEmptyValues(key, fKey.toString(), this.arraySize(this.values.get(key)));     // když nezačínají všechny prvky v jObjektu od začátku                               
+                                }
+                                else{
+                                    this.values.get(key).put(fKey.toString(), new ArrayList<>());
+                                }
                         }
                         //System.out.println("Fkey: "+fKey + " val: " + obj.get(fKey.toString()));
                         this.fKeys.put(fKey.toString(), key);
+                        //System.out.println("addding value:" + obj.get(fKey.toString()).toString() + " for key: " +fKey + " parent" + key);
                         this.values.get(key).get(fKey).add(obj.get(fKey.toString()).toString());
                         //System.out.println("obj: " + obj.toString() + " fkey: " + fKey);
                         //this.addRow(fKey.toString(), key);
                     }
 
-                } 
+                }
+                if (this.differentArraySize(this.values.get(key))){
+                    //System.out.println("1parent " + key + " values " + this.values.get(key) );
+                    this.addEmptyValue(key, this.values.get(key));
+                }
+                //System.out.println("1parent " + key + " values " + this.values.get(key) );
 
                 //this.addPrimaryKey("id_"+key, key);
                     //*/
@@ -166,7 +179,7 @@ public class ToSql {
                         if(!(obj2.get(fKey.toString()) instanceof JSONObject) && !(obj2.get(fKey.toString()) instanceof JSONArray)){
                             if (!this.values.get(obj.toString()).containsKey(fKey)){
                                 if ((this.values.get(obj.toString()).size() > 0)){
-                                    System.out.println("parent: " + obj.toString() + " key: " + fKey + " value: " + jsonObject.getJSONObject(obj.toString()).get(fKey).toString());
+                                    //System.out.println("parent: " + obj.toString() + " key: " + fKey + " value: " + jsonObject.getJSONObject(obj.toString()).get(fKey).toString());
                                     this.addEmptyValues(obj.toString(), fKey, this.arraySize(this.values.get(obj.toString())));     // když nezačínají všechny prvky v jObjektu od začátku                               
                                 }
                                 else{
@@ -188,6 +201,10 @@ public class ToSql {
                             //this.tables.get(obj.toString()).append(this.addForeignKey2(fKey, obj.toString()));
                         //}
                         //this.addForeignKey(fKey, obj.toString());
+                    }
+                    if (this.differentArraySize(this.values.get(obj.toString()))){
+                        //System.out.println("2parent " + obj.toString() + " values " + this.values.get(obj.toString()) );
+                        this.addEmptyValue(obj.toString(), this.values.get(obj.toString()));
                     }
                     //this.addPrimaryKey("id_"+obj.toString(), obj.toString());
                         //*/
@@ -213,7 +230,15 @@ public class ToSql {
                             //this.addId("id_"+tmpTable, 10, tmpTable);
                         }
                         if (!this.values.get(tmpTable).containsKey(obj.toString())){
+                            if ((this.values.get(tmpTable).size() > 0)){
+                                    //System.out.println("parent: " + tmpTable + " key: " + obj.toString());
+                                    this.addEmptyValues(obj.toString(), obj.toString(), this.arraySize(this.values.get(tmpTable)));     // když nezačínají všechny prvky v jObjektu od začátku                               
+                                }
+                            else{
                                 this.values.get(tmpTable).put(obj.toString(), new ArrayList<>());
+                            }
+                            
+                            //this.values.get(tmpTable).put(obj.toString(), new ArrayList<>());
                         }
                         
                         //this.addRow(obj.toString(), tmpTable);
@@ -274,6 +299,7 @@ public class ToSql {
                 while(iterator.hasNext()){
                     analyzedType = iterator.next();
                     if (resultField.get(ItemType.IsNull)){
+                        //System.out.println("DatTy: " + item.isNotNull() + " item: " + item.getValue() + " key: " + item.getParent());
                         // to get right data type
                         if(resultField.get(analyzedType)){
                             //System.out.println(" item + a" );
@@ -419,6 +445,7 @@ public class ToSql {
         //dopln
 
         this.values.forEach((key, value)->{
+            //System.out.println("key: " + key + " array: " + value);
             this.firstRow = true;
             this.createTable(key, key);
             if (!this.values.get(key).isEmpty()){
@@ -489,9 +516,12 @@ public class ToSql {
         arrays.forEach((key,value) -> {
             if (maxSize.get() < value.size()){
                 maxSize.set(value.size());
+                //System.out.println("1key: " + key + " value: " + value + " mSize" + maxSize);
             }
         });
         return maxSize.get();
+                
+        //return this.values.size();
     }
     
     private void addEmptyValues(String parent, String key, int size){
@@ -500,5 +530,48 @@ public class ToSql {
             arrList.add("");
         }
         this.values.get(parent).put(key, arrList);
+        //System.out.println("Adding key: " + key +" array: "+ arrList.toString()+ arrList.size());
+    }
+    
+    private boolean differentArraySize(Map <String, List<String>> arrays){    
+        IntegerProperty size = new SimpleIntegerProperty();
+        BooleanProperty differentSize = new SimpleBooleanProperty();
+        differentSize.set(false);
+        size.set(-1);
+        
+        arrays.forEach((key,value) -> {
+            if (size.get() == -1){
+                size.set(value.size());
+            }
+            else{
+                if (size.get() != value.size()){
+                differentSize.set(true);
+                }
+            }
+        });
+        return differentSize.get();
+    }
+    
+    private void addEmptyValue(String parrent, Map <String, List<String>> arrays){
+        int maxSize = this.arraySize(arrays);
+        
+        arrays.forEach((key,value) -> {
+            if (maxSize > value.size()){
+                this.values.get(parrent).get(key).add("");
+                int index = this.getItemIndex(key);
+                if (index !=-1){
+                    this.items.get(index).setNotNull(false);
+                }
+            }
+        });
+    }
+    
+    private int getItemIndex(String key){
+        for (int i=0; i<this.items.size(); i++){
+            if(items.get(i).getParent() == null ? key == null : items.get(i).getParent().equals(key)){
+                return i;
+            }
+        }
+        return -1;
     }
 }

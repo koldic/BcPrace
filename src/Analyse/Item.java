@@ -49,7 +49,7 @@ public class Item {
     private boolean isPossibleId = false;
     
     public Item(String key, String val) {
-        
+        //System.out.println("checking: " + key + "is empty?");
         if (val == null || val.isEmpty()){
             this.value = null;
             this.notNull = false;
@@ -158,7 +158,6 @@ public class Item {
             if (this.checkDate && this.value.matches(".*[0-9].*.*[0-9].*")){
                 this.chechkDate("en"); // US date format first - en
             }
-    
         }
     }
     
@@ -182,6 +181,16 @@ public class Item {
         resultField.put(ItemType.ZipCode, this.isZipCode);
         resultField.put(ItemType.StringText, this.isString);
         resultField.put(ItemType.IsNull, (!this.notNull));
+        
+        if(!this.isString){
+            boolean allFalse = false;
+            for (ItemType itemType : resultField.keySet()){
+                if (itemType != ItemType.IsNull){
+                    allFalse = allFalse | resultField.get(itemType);
+                }
+            }
+            resultField.replace(ItemType.StringText, allFalse);
+        }
             
         return resultField;
     }

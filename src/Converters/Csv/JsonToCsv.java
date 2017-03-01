@@ -5,21 +5,11 @@
  */
 package Converters.Csv;
 
-import Analyse.AnalyzerStorage;
-import Analyse.Item;
-import com.github.wnameless.json.flattener.JsonFlattener;
-import com.github.wnameless.json.unflattener.JsonUnflattener;
-import java.lang.reflect.Type;
-import static java.rmi.server.LogStream.log;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import org.json.CDL;
 import org.json.JSONArray;
 import org.json.JSONException;

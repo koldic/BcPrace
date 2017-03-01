@@ -59,7 +59,7 @@ public class BcPrace {
         String xmlOutputFileName = "xmlOut.xml";
         String jsonOutputFileName = "jsonOut.json";
         
-        String inputFileName = jsonDocumentOrg5;
+        String inputFileName = xmlDocument3;
         
         FileCheck fileChecker = new FileCheck(inputFileName);
         FileTypes fileType = fileChecker.checkFile();
@@ -110,6 +110,10 @@ public class BcPrace {
             //analyzer.parseJson(jsonObjectXlsx, 10);
             analyzedItems = analyzer.Analyse();
             analyzer.PrintStorage(); 
+            /*
+            for (Item it : analyzedItems){
+                System.out.println("Key: " + it.getParent() + " values" + it.provideResultField());
+            }*/
             
         } catch (JSONException ex) {
             Logger.getLogger(BcPrace.class.getName()).log(Level.SEVERE, null, ex);
@@ -127,7 +131,7 @@ public class BcPrace {
         //System.out.println("SEcond: ");
         //testItem2.ChecTypes();
         
-        ToSql sqlConvertor = new ToSql("test", analyzedItems, DatabaseType.MySql);
+        ToSql sqlConvertor = new ToSql("test", analyzedItems, DatabaseType.Oracle);
         String sqlOutput = sqlConvertor.buildSql(jObject);
         FileWrite.writeStringtoFile(sqlOutput, outputPath, sqlOutputFileName);
         sqlOutput = null;
