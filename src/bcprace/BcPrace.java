@@ -12,6 +12,7 @@ import Converters.CsvToJson;
 import Converters.Sql.SqlToJson;
 import Analyse.*;
 import Converters.Csv.JsonToCsv;
+import Converters.FlattenJson;
 import Converters.JsonToXml;
 import Sql.*;
 import File.*;
@@ -59,7 +60,7 @@ public class BcPrace {
         String xmlOutputFileName = "xmlOut.xml";
         String jsonOutputFileName = "jsonOut.json";
         
-        String inputFileName = xmlDocument3;
+        String inputFileName = jsonDocumentOrg3;
         
         FileCheck fileChecker = new FileCheck(inputFileName);
         FileTypes fileType = fileChecker.checkFile();
@@ -110,10 +111,10 @@ public class BcPrace {
             //analyzer.parseJson(jsonObjectXlsx, 10);
             analyzedItems = analyzer.Analyse();
             analyzer.PrintStorage(); 
-            
+            /*
             for (Item it : analyzedItems){
                 System.out.println("Key: " + it.getParent() + " values" + it.provideResultField());
-            }
+            }*/
             
         } catch (JSONException ex) {
             Logger.getLogger(BcPrace.class.getName()).log(Level.SEVERE, null, ex);
@@ -130,8 +131,9 @@ public class BcPrace {
         //testItem.ChecTypes();
         //System.out.println("SEcond: ");
         //testItem2.ChecTypes();
+        FlattenJson flat = new FlattenJson(jObject, "test", analyzedItems);
         
-        ToSql sqlConvertor = new ToSql("test", analyzedItems, DatabaseType.Oracle);
+        ToSql sqlConvertor = new ToSql("test", flat.makeJsonFlat(), DatabaseType.MySql, analyzedItems);
         String sqlOutput = sqlConvertor.buildSql(jObject);
         FileWrite.writeStringtoFile(sqlOutput, outputPath, sqlOutputFileName);
         sqlOutput = null;

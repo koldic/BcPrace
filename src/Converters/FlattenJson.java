@@ -3,20 +3,13 @@
  * To change this template file, choose Tools | Templates
  * and open the template in the editor.
  */
-package Sql;
+package Converters;
 
 import Analyse.Item;
-import Analyse.ItemType;
-import bcprace.BcPrace;
-import java.text.DateFormat;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -28,52 +21,76 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+
+    
+
 /**
  *
  * @author David
  */
-public class ToSql {
+public class FlattenJson {
     
-    private final String databaseName;
-    private StringBuilder createStructure;
-    private StringBuilder createInsert;
-    private StringBuilder insertValues;
-    private final List<Item> items;
-    //private Map<String, StringBuilder> tables;
+    private final String dataName;
     private Map<String, Map<String, List<String>>> values;
     private Map<String, String> rows;
     private Map<String, String> fKeys;
-    private final DatabaseType dbType;
+    private final JSONObject jsonObject;
+    private final JSONArray jsonArray;
+    private final List<Item> items;
     private int tableNumber;
-    private Boolean firstRow;
-    private Boolean firstColumnValue;
+    private final Boolean jsonObjectStart;
     
-    public ToSql(String dbName, List<Item> items, DatabaseType dbType){
-        this.databaseName = dbName;
+    public FlattenJson(JSONObject jsonObject, String dataName, List<Item> items){
+        this.jsonObject = jsonObject;
+        this.jsonArray = null;
+        this.tableNumber = 0;
+        this.dataName = dataName;
+        this.jsonObjectStart = true;
         this.items = items;
-        this.dbType = dbType;
-        this.createStructure = new StringBuilder();
-        this.createInsert = new StringBuilder();
-        this.insertValues = new StringBuilder();
-        //this.tables = new LinkedHashMap<>();
+        
         this.rows = new LinkedHashMap<>();
         this.values = new LinkedHashMap<>();
         this.fKeys = new LinkedHashMap<>();
-        this.tableNumber = 0;
     }
     
-    public ToSql(String dbName, Map<String, Map<String, List<String>>> values, DatabaseType dbType, List<Item> analysedItems){
-        this.databaseName = dbName;
-        this.items = analysedItems;
-        this.dbType = dbType;
-        this.createStructure = new StringBuilder();
-        this.createInsert = new StringBuilder();
-        this.insertValues = new StringBuilder();
-        //this.tables = new LinkedHashMap<>();
-        this.rows = new LinkedHashMap<>();
-        this.values = values;
-        this.fKeys = new LinkedHashMap<>();
+    public FlattenJson(JSONArray jsonArray, String dataName, List<Item> items){
+        this.jsonObject = null;
+        this.jsonArray = jsonArray;
         this.tableNumber = 0;
+        this.dataName = dataName;
+        this.jsonObjectStart = false;
+        this.items = items;
+        
+        this.rows = new LinkedHashMap<>();
+        this.values = new LinkedHashMap<>();
+        this.fKeys = new LinkedHashMap<>();
+    }
+    
+    public Map<String, Map<String, List<String>>> makeJsonFlat() {
+        if(this.jsonObjectStart){
+            try {
+                this.parseJson(this.jsonObject);
+            } catch (JSONException ex) {
+                Logger.getLogger(FlattenJson.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        else{
+            try {
+                this.getArray(jsonArray, dataName);
+            } catch (JSONException ex) {
+                Logger.getLogger(FlattenJson.class.getName()).log(Level.SEVERE, null, ex);
+            }
+        }
+        /*
+        this.values.forEach((key, value)->{
+        
+            System.out.println("fattenJson: " + value);
+        
+        });
+        */
+        return this.values;
+        
+        
     }
     
     private void getArray(Object object2, String key) throws JSONException  {
@@ -150,7 +167,7 @@ public class ToSql {
     
     private void parseJson(JSONObject jsonObject) throws JSONException  {
         this.increaseTableNumber();
-        String tmpTable = (this.databaseName.concat(Integer.toString(this.getTableNumber())));
+        String tmpTable = (this.dataName.concat(Integer.toString(this.getTableNumber())));
         Iterator<Object> iterator = jsonObject.keys();
         
         while (iterator.hasNext()) {
@@ -246,11 +263,12 @@ public class ToSql {
                         if (!this.values.get(tmpTable).containsKey(obj.toString())){
                             if ((this.values.get(tmpTable).size() > 0)){
                                     //System.out.println("parent: " + tmpTable + " key: " + obj.toString());
-                                    this.addEmptyValues(obj.toString(), obj.toString(), this.arraySize(this.values.get(tmpTable)));     // když nezačínají všechny prvky v jObjektu od začátku                               
+                                    this.addEmptyValues(tmpTable, obj.toString(), this.arraySize(this.values.get(tmpTable)));     // když nezačínají všechny prvky v jObjektu od začátku                               
                                 }
                             else{
                                 this.values.get(tmpTable).put(obj.toString(), new ArrayList<>());
                             }
+                            this.values.get(tmpTable).get(obj.toString()).add(jsonObject.get(obj.toString()).toString());
                             
                             //this.values.get(tmpTable).put(obj.toString(), new ArrayList<>());
                         }
@@ -268,238 +286,6 @@ public class ToSql {
         this.decreaseTableNumber();
     }
     
-    private String getDate(Item dateItem){
-        
-        DateFormat oFormat = new SimpleDateFormat("MMMM dd, yyyy", Locale.ENGLISH);
-        DateFormat targetFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
-        Date date = null;
-        try {
-           date = oFormat.parse("August 21, 2012");
-        } catch (ParseException ex) {
-           Logger.getLogger(BcPrace.class.getName()).log(Level.SEVERE, null, ex);
-        }
-        String formattedDate = targetFormat.format(date);
-        System.out.println(formattedDate); // prints 2010-01-01 14:30:59
-        
-        return null;
-    }
-    
-    private void createTable(String tableName, String key){
-        this.createStructure.append(String.format("-- Table structure for table `%s`", tableName)).append("\n");
-        this.createStructure.append(String.format(SqlStatement.CreateTable.getStatement(dbType), tableName)).append("\n");
-        //this.createStructure.append(String.format("-- Table structure for table `%s`", tableName)).append("\n");
-        //this.createStructure.append(String.format(SqlStatement.CreateTable.getStatement(dbType), tableName)).append("\n");
-    }
-    
-    private String createTable2(String tableName){
-        return ((String.format("-- Table structure for table `%s`", tableName))+"\n"+(String.format(SqlStatement.CreateTable.getStatement(dbType), tableName))+"\n");
-    }
-    
-    private void endOfTable(String key){
-        this.createStructure.append(SqlStatement.EndCreateTable.getStatement(dbType)).append("\n").append("\n");
-    }
-    
-    private String endOfTable2(){
-        return (SqlStatement.EndCreateTable.getStatement(dbType))+"\n";
-    }
-    
-    private void addRow(String rowName, String key, Boolean firstRow){
-        ItemType analyzedType;
-        for (Item item : this.items) {
-            if (item.getParent().equals(rowName)){
-                Map<ItemType, Boolean> resultField = item.provideResultField();
-                String analysedType = null;
-                Iterator<ItemType> iterator = resultField.keySet().iterator();
-                while(iterator.hasNext()){
-                    analyzedType = iterator.next();
-                    if (resultField.get(ItemType.IsNull)){
-                        //System.out.println("DatTy: " + item.isNotNull() + " item: " + item.getValue() + " key: " + item.getParent());
-                        // to get right data type
-                        if(resultField.get(analyzedType)){
-                            //System.out.println(" item + a" );
-                            if (firstRow){
-                                this.createStructure.append(String.format(SqlStatement.addRow.getStatement(dbType), rowName)).append(" ").append(String.format(SqlStatement.valueOf(analyzedType.toString()).getStatement(dbType), item.getLenght()));
-                            }
-                            else{
-                                this.createStructure.append(", \n").append(String.format(SqlStatement.addRow.getStatement(dbType), rowName)).append(" ").append(String.format(SqlStatement.valueOf(analyzedType.toString()).getStatement(dbType), item.getLenght()));
-                            }
-                            //System.out.println("ano not null" + analyzedType);
-                            break;
-                        }
-                    }
-                    else{
-                        if(resultField.get(analyzedType)){
-                            //System.out.println(" item + " + analyzedType);
-                            if (item.isIsDate()){
-                                // Select date format for database type
-                                //System.out.println(" item + date " + item.getValue() + " Format: " + item.getDateFormatCount().get(0).getDateFormat());
-                                if (firstRow){
-                                    this.createStructure.append(String.format(SqlStatement.addRow.getStatement(dbType), rowName)).append(" ").append(String.format(SqlStatement.valueOf(analyzedType.toString()).getStatement(dbType), item.getDateFormatCount().get(0).getDateFormat()))
-                                    .append(" ").append(SqlStatement.NotNull.getStatement(dbType));
-                                }
-                                else{
-                                    this.createStructure.append(", \n").append(String.format(SqlStatement.addRow.getStatement(dbType), rowName)).append(" ").append(String.format(SqlStatement.valueOf(analyzedType.toString()).getStatement(dbType), item.getDateFormatCount().get(0).getDateFormat()))
-                                    .append(" ").append(SqlStatement.NotNull.getStatement(dbType));
-                                }
-                                break;
-                            }
-                            else{
-                                //System.out.println(" item + nodate " + item.getValue());
-                                if (firstRow){
-                                    this.createStructure.append(String.format(SqlStatement.addRow.getStatement(dbType), rowName)).append(" ").append(String.format(SqlStatement.valueOf(analyzedType.toString()).getStatement(dbType), item.getLenght()))
-                                    .append(" ").append(SqlStatement.NotNull.getStatement(dbType));
-                                }
-                                else{
-                                    this.createStructure.append(", \n").append(String.format(SqlStatement.addRow.getStatement(dbType), rowName)).append(" ").append(String.format(SqlStatement.valueOf(analyzedType.toString()).getStatement(dbType), item.getLenght()))
-                                    .append(" ").append(SqlStatement.NotNull.getStatement(dbType));
-                                }
-                                break;
-                            }
-                            //System.out.println("ano not null" + analyzedType);
-                            //break;
-                        }
-                    }
-                }
-                
-                break;
-            }
-        }
-        
-        //this.createStructure.append(", \n").append(String.format(SqlStatement.addRow.getStatement(dbType), rowName));
-    }
-    
-    private String addRow2(String rowName){
-        return (String.format(SqlStatement.addRow.getStatement(dbType), rowName));
-    }
-    
-    private void addId(String idName, int size, String key){
-        this.createStructure.append(String.format(SqlStatement.addRow.getStatement(dbType), idName)).append(" ").append(String.format(SqlStatement.UnsignedIntNumber.getStatement(dbType), size))
-            .append(" ").append(SqlStatement.NotNull.getStatement(dbType)).append(" ").append(SqlStatement.AutoIncrement.getStatement(dbType));
-    }
-    
-    private String addId2(String idName, int size){
-        return ((String.format(SqlStatement.addRow.getStatement(dbType), idName))+" "+(String.format(SqlStatement.UnsignedIntNumber.getStatement(dbType), size))
-            +" "+(SqlStatement.NotNull.getStatement(dbType))+" "+(SqlStatement.AutoIncrement.getStatement(dbType)));
-    }
-    
-    private void addPrimaryKey(String pKey, String key){
-        this.createStructure.append(", \n").append(SqlStatement.PrimaryKey.getStatement(dbType)).append(" (`").append(pKey).append("`)\n);\n\n");
-    }
-    
-    private String addPrimaryKey2(String pKey){
-        return (", \n")+(SqlStatement.PrimaryKey.getStatement(dbType))+(" (`")+(pKey)+("`)\n);\n\n");
-    }
-    
-    private void addForeignKey(String fKey, String parent, String key){
-        this.createStructure.append(",\n").append(String.format(SqlStatement.ForeignKey.getStatement(dbType), fKey, parent, fKey));
-    }
-    
-    private String addForeignKey2(String fKey, String parent){
-        return (",\n")+(String.format(SqlStatement.ForeignKey.getStatement(dbType), fKey, parent, fKey));
-    }
-    
-    private void insertTable(String tableName){
-        this.createInsert.append(String.format(SqlStatement.Insert.getStatement(dbType), tableName));
-    }
-    
-    private void insertColumn(String columnName, Boolean firstColumn){
-        if (firstRow){
-            this.createInsert.append(String.format(SqlStatement.InsertColumn.getStatement(dbType), columnName));
-        }
-        else{
-            this.createInsert.append(", ").append(String.format(SqlStatement.InsertColumn.getStatement(dbType), columnName));
-        }
-    }
-    
-    private void endOfInserColumn(){
-        this.createInsert.append(SqlStatement.EndInsert.getStatement(dbType)).append("\n");
-    }
-    
-    private void insertValues(){
-        this.createInsert.append(String.format(SqlStatement.InsertValues.getStatement(dbType)));
-    }
-    
-    private void endOfInserValues(){
-        this.createInsert.append(SqlStatement.EndofInsertValues.getStatement(dbType)).append("\n").append("\n");
-    }
-    
-    private void addValue(String value, Boolean firstValue){
-        if (firstValue){
-            this.createInsert.append("\n").append("( ").append(String.format(SqlStatement.InsertValue.getStatement(dbType), value));
-        }
-        else{
-            this.createInsert.append(", ").append(String.format(SqlStatement.InsertValue.getStatement(dbType), value));
-        }
-    }
-    
-    private void endOfAddValue(Boolean lastLine){
-        if (lastLine){
-            this.createInsert.append(SqlStatement.EndofInsertValues.getStatement(dbType)).append("\n");
-        }
-        else{
-            this.createInsert.append(SqlStatement.EndofInsertValue.getStatement(dbType));
-        }
-    }
-    
-    public String buildSql(JSONObject jsonObject){
-        this.createStructure.append("-- Database ").append(this.databaseName).append("\n");
-        this.createStructure.append(String.format(SqlStatement.CreateDatabase.getStatement(dbType), this.databaseName)).append("\n").append("\n");
-        
-        
-        //dopln
-
-        this.values.forEach((key, value)->{
-            //System.out.println("key: " + key + " array: " + value);
-            this.firstRow = true;
-            this.createTable(key, key);
-            if (!this.values.get(key).isEmpty()){
-                this.insertTable(key);
-            }
-            
-            value.forEach((key2, value2)->{
-                this.addRow(key2, key2, firstRow);
-                if (!this.values.get(key).isEmpty()){
-                    this.insertColumn(key2, firstRow);
-                }
-
-                this.firstRow = false;
-                
-            });
-            this.endOfTable(key);
-            if (!this.values.get(key).isEmpty()){
-            
-                this.endOfInserColumn();
-                this.insertValues();
-
-                for (String arKey : value.keySet()){
-                    for (int j=0;j<value.get(arKey).size();j++){
-                        this.firstColumnValue = true;
-                        for(String keys : value.keySet()){
-                            if (j<value.get(keys).size()){
-                                //System.out.println("key: " + keys + " value: " + value.get(keys).get(j));
-                                this.addValue(value.get(keys).get(j), this.firstColumnValue);
-                            }
-                            this.firstColumnValue = false;
-                        }
-                        if(value.get(arKey).size()-1 == j){
-                            this.endOfAddValue(true);
-                        }
-                        else{
-                            this.endOfAddValue(false);
-                        }
-                    }
-                    break;
-                }
-            }
-            
-            //this.endOfInserValues();
-            //this.createStructure.append(value);
-            //System.out.println("key: "+ key + value.toString());
-        });
-        
-        
-        return (this.createStructure.toString()+this.createInsert.toString());
-    }
     
     public void increaseTableNumber (){
         this.tableNumber++;
@@ -533,6 +319,7 @@ public class ToSql {
         for (int i=1; i < size; i++){
             arrList.add("");
         }
+        //System.out.println("Adding key: " + key +" parent: "+ parent);
         this.values.get(parent).put(key, arrList);
         //System.out.println("Adding key: " + key +" array: "+ arrList.toString()+ arrList.size());
     }
